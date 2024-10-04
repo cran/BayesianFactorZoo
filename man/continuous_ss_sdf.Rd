@@ -12,7 +12,8 @@ continuous_ss_sdf(
   r = 0.001,
   aw = 1,
   bw = 1,
-  type = "OLS"
+  type = "OLS",
+  intercept = TRUE
 )
 }
 \arguments{
@@ -33,14 +34,18 @@ and \eqn{N} is the number of test assets;}
 \item{bw}{The hyper-parameter related to the prior of \eqn{\gamma} (see \bold{Details});}
 
 \item{type}{If \code{type = 'OLS'} (\code{type = 'GLS'}), the function returns Bayesian OLS (GLS) estimates of risk prices. The default is 'OLS'.}
+
+\item{intercept}{If \code{intercept = TRUE} (\code{intercept = FALSE}), we include (exclude) the common intercept in the cross-sectional regression. The default is \code{intercept = TRUE}.}
 }
 \value{
 The return of \code{continuous_ss_sdf} is a list of the following elements:
 \itemize{
 \item \code{gamma_path}: A \code{sim_length}\eqn{\times k} matrix of the posterior draws of \eqn{\gamma}. Each row represents
 a draw. If \eqn{\gamma_j = 1} in one draw, factor \eqn{j} is included in the model in this draw and vice verse.
-\item \code{lambda_path}: A \code{sim_length}\eqn{\times (k+1)} matrix of the risk prices \eqn{\lambda}. Each row represents
-a draw. Note that the first column is \eqn{\lambda_c} corresponding to the constant term. The next \eqn{k} columns (i.e., the 2-th -- \eqn{(k+1)}-th columns) are the risk prices of the \eqn{k} factors.
+\item \code{lambda_path}: A \code{sim_length}\eqn{\times (k+1)} matrix of the risk prices \eqn{\lambda} if \code{intercept = TRUE}. Each row represents
+a draw. Note that the first column is \eqn{\lambda_c} corresponding to the constant term. The next \eqn{k} columns (i.e., the 2-th -- \eqn{(k+1)}-th columns)
+are the risk prices of the \eqn{k} factors. If \code{intercept = FALSE}, \code{lambda_path} is a \code{sim_length}\eqn{\times k} matrix of the risk prices,
+without the estimates of \eqn{\lambda_c}.
 \item \code{sdf_path}: A \code{sim_length}\eqn{\times t} matrix of posterior draws of SDFs. Each row represents a draw.
 \item \code{bma_sdf}: BMA-SDF.
 }
@@ -60,9 +65,10 @@ When the factor \eqn{j} is included, we have \eqn{ r(\gamma_j = 1)=1 }.
 When the factor is excluded from the model, \eqn{ r(\gamma_j = 0) =r \ll 1 }.
 Hence, the Dirac "spike" is replaced by a Gaussian spike, which is extremely concentrated at zero
 (the default value for \eqn{r} is 0.001).
-We choose \eqn{ \psi_j =  \psi \tilde{\rho}_j^\top \tilde{\rho}_j  },
+If \code{intercept = TRUE}, we choose \eqn{ \psi_j =  \psi \tilde{\rho}_j^\top \tilde{\rho}_j  },
 where \eqn{ \tilde{\rho}_j = \rho_j - (\frac{1}{N} \Sigma_{i=1}^{N} \rho_{j,i}  ) \times 1_N }
 is the cross-sectionally demeaned vector of factor \eqn{j}'s correlations with asset returns.
+Instead, if \code{intercept = FALSE}, we choose \eqn{ \psi_j =  \psi \rho_j^\top \rho_j  }.
 In the codes, \eqn{\psi} is equal to the value of \code{psi0}.
 
 The prior \eqn{\pi (\omega)} encoded the belief about the sparsity of the true model using the prior distribution

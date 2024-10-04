@@ -13,6 +13,7 @@
 #' @param aw The hyper-parameter related to the prior of \eqn{\gamma} (see \bold{Details});
 #' @param bw The hyper-parameter related to the prior of \eqn{\gamma} (see \bold{Details});
 #' @param type If \code{type = 'OLS'} (\code{type = 'GLS'}), the function returns Bayesian OLS (GLS) estimates of risk prices. The default is 'OLS'.
+#' @param intercept If \code{intercept = TRUE} (\code{intercept = FALSE}), we include (exclude) the common intercept in the cross-sectional regression. The default is \code{intercept = TRUE}.
 #'
 #' @details
 #'
@@ -26,9 +27,10 @@
 #' When the factor is excluded from the model, \eqn{ r(\gamma_j = 0) =r \ll 1 }.
 #' Hence, the Dirac "spike" is replaced by a Gaussian spike, which is extremely concentrated at zero
 #' (the default value for \eqn{r} is 0.001).
-#' We choose \eqn{ \psi_j =  \psi \tilde{\rho}_j^\top \tilde{\rho}_j  },
+#' If \code{intercept = TRUE}, we choose \eqn{ \psi_j =  \psi \tilde{\rho}_j^\top \tilde{\rho}_j  },
 #' where \eqn{ \tilde{\rho}_j = \rho_j - (\frac{1}{N} \Sigma_{i=1}^{N} \rho_{j,i}  ) \times 1_N }
 #' is the cross-sectionally demeaned vector of factor \eqn{j}'s correlations with asset returns.
+#' Instead, if \code{intercept = FALSE}, we choose \eqn{ \psi_j =  \psi \rho_j^\top \rho_j  }.
 #' In the codes, \eqn{\psi} is equal to the value of \code{psi0}.
 #'
 #' The prior \eqn{\pi (\omega)} encoded the belief about the sparsity of the true model using the prior distribution
@@ -51,8 +53,10 @@
 #' \itemize{
 #'   \item \code{gamma_path}: A \code{sim_length}\eqn{\times k} matrix of the posterior draws of \eqn{\gamma}. Each row represents
 #'   a draw. If \eqn{\gamma_j = 1} in one draw, factor \eqn{j} is included in the model in this draw and vice verse.
-#'   \item \code{lambda_path}: A \code{sim_length}\eqn{\times (k+1)} matrix of the risk prices \eqn{\lambda}. Each row represents
-#'   a draw. Note that the first column is \eqn{\lambda_c} corresponding to the constant term. The next \eqn{k} columns (i.e., the 2-th -- \eqn{(k+1)}-th columns) are the risk prices of the \eqn{k} factors.
+#'   \item \code{lambda_path}: A \code{sim_length}\eqn{\times (k+1)} matrix of the risk prices \eqn{\lambda} if \code{intercept = TRUE}. Each row represents
+#'   a draw. Note that the first column is \eqn{\lambda_c} corresponding to the constant term. The next \eqn{k} columns (i.e., the 2-th -- \eqn{(k+1)}-th columns)
+#'   are the risk prices of the \eqn{k} factors. If \code{intercept = FALSE}, \code{lambda_path} is a \code{sim_length}\eqn{\times k} matrix of the risk prices,
+#'   without the estimates of \eqn{\lambda_c}.
 #'   \item \code{sdf_path}: A \code{sim_length}\eqn{\times t} matrix of posterior draws of SDFs. Each row represents a draw.
 #'   \item \code{bma_sdf}: BMA-SDF.
 #' }
@@ -89,8 +93,31 @@
 #'
 
 
+# data("BFactor_zoo_example")
+# HML <- BFactor_zoo_example$HML
+# lambda_ols <- BFactor_zoo_example$lambda_ols
+# R2.ols.true <- BFactor_zoo_example$R2.ols.true
+# sim_f <- BFactor_zoo_example$sim_f
+# sim_R <- BFactor_zoo_example$sim_R
+# uf <- BFactor_zoo_example$uf
+#
+# psi0 = 1
+# r = 0.001
+# aw = 1
+# bw = 1
+# sim_length = 2000
+# type = "OLS"
+# f <- sim_f
+# R <- sim_R
+# intercept <- FALSE
+#
+# bayes.est <- continuous_ss_sdf(sim_f, sim_R, sim_length=1000, psi0 = 1, r = 0.001,
+#                                aw = 1, bw = 1, type = "GLS", intercept = FALSE)
+# print(colMeans(bayes.est$gamma_path))
+# print(colMeans(bayes.est$lambda_path))
 
-continuous_ss_sdf <- function(f, R, sim_length, psi0 = 1, r = 0.001, aw = 1, bw = 1, type = "OLS") {
+
+continuous_ss_sdf <- function(f, R, sim_length, psi0 = 1, r = 0.001, aw = 1, bw = 1, type = "OLS", intercept = TRUE) {
 
   # f: matrix of factors with dimension t times k, where k is the number of factors and t is
   #    the number of periods.
@@ -112,12 +139,20 @@ continuous_ss_sdf <- function(f, R, sim_length, psi0 = 1, r = 0.001, aw = 1, bw 
   check_input2(f,R);
 
   ## Matrices as outputs
-  lambda_path <- matrix(0, ncol = (1+k), nrow = sim_length)
+  if (intercept == FALSE) {
+    lambda_path <- matrix(0, ncol = k, nrow = sim_length)
+  } else {
+    lambda_path <- matrix(0, ncol = (1+k), nrow = sim_length)
+  }
   gamma_path <- matrix(0, ncol = k, nrow = sim_length)
   sdf_path <- matrix(0, ncol=t, nrow = sim_length)
 
   # Initialize some parameters:
-  beta_ols <- cbind(matrix(1, nrow = N, ncol = 1), Corr_ols[(k+1):p, 1:k])
+  if (intercept == FALSE) {
+    beta_ols <- Corr_ols[(k+1):p, 1:k, drop=FALSE]
+  } else {
+    beta_ols <- cbind(matrix(1, nrow = N, ncol = 1), Corr_ols[(k+1):p, 1:k])
+  }
   a_ols <- mu_ols[(1+k):p,,drop=FALSE] / sd_ols[(k+1):p]
   Lambda_ols <- chol2inv(chol(t(beta_ols)%*%beta_ols)) %*% t(beta_ols) %*% a_ols
   omega <- rep(0.5, k)
@@ -128,7 +163,11 @@ continuous_ss_sdf <- function(f, R, sim_length, psi0 = 1, r = 0.001, aw = 1, bw 
 
   ### Set the prior distribution for lambda_f
   rho <- cor(Y)[(k+1):p, 1:k, drop = FALSE]
-  rho.demean <- rho - matrix(1, ncol = 1, nrow = N) %*% matrix(colMeans(rho), nrow = 1)
+  if (intercept == FALSE) {
+    rho.demean <- rho
+  } else {
+    rho.demean <- rho - matrix(1, ncol = 1, nrow = N) %*% matrix(colMeans(rho), nrow = 1)
+  }
   if (k == 1) {
     psi <- psi0 * c(t(rho.demean)%*%rho.demean)
   } else {
@@ -152,11 +191,23 @@ continuous_ss_sdf <- function(f, R, sim_length, psi0 = 1, r = 0.001, aw = 1, bw 
     a <- mu[(1+k):p,1,drop=FALSE] / sd_Y[(1+k):p]  # Sharpe ratio of test assets;
 
     #### II. Second-Stage: cross-section regression (Gibbs Sampling)
-    beta <- cbind(matrix(1,nrow = N, ncol = 1), C_f)
+    if (intercept == FALSE) {
+      beta <- matrix(C_f, nrow = N)
+    } else {
+      beta <- cbind(matrix(1,nrow = N, ncol = 1), C_f)
+    }
     corrR <- corr_Y[(k+1):p, (k+1):p]
 
     ## Step II.1. Draw lambda conditional on (data, sigma2, gamma, omega): equation (28)
-    D <- diag(c(1/100000, 1/(r_gamma*psi)))
+    if (intercept == FALSE) {
+      if (k == 1) {
+        D <- matrix(1/(r_gamma*psi))
+      } else {
+        D <- diag(1/(r_gamma*psi))
+      }
+    } else {
+      D <- diag(c(1/100000, 1/(r_gamma*psi)))
+    }
     if (type=='OLS') {
       beta_D_inv <- chol2inv(chol(t(beta)%*%beta + D))
       cov_Lambda <- sigma2 * beta_D_inv
@@ -167,11 +218,19 @@ continuous_ss_sdf <- function(f, R, sim_length, psi0 = 1, r = 0.001, aw = 1, bw 
       cov_Lambda <- sigma2 * beta_D_inv
       Lambda_hat <- beta_D_inv %*% t(beta)%*%solve(corrR)%*%a
     }
-    Lambda <- Lambda_hat + t(chol(cov_Lambda)) %*% matrix(rnorm(k+1), ncol = 1)
+    if (intercept == FALSE) {
+      Lambda <- Lambda_hat + t(chol(cov_Lambda)) %*% matrix(rnorm(k), ncol = 1)
+    } else {
+      Lambda <- Lambda_hat + t(chol(cov_Lambda)) %*% matrix(rnorm(k+1), ncol = 1)
+    }
 
     ## Step II.2. Draw gamma_j conditional on (data, Lambda, psi, sigma2, gamma_{-j}, omega):
     ##            See equation (29)
-    log.odds <- log((omega/(1-omega))) + 0.5*log(r) + 0.5*Lambda[2:(k+1)]^2*(1/r-1)/(sigma2*psi)
+    if (intercept == FALSE) {
+      log.odds <- log((omega/(1-omega))) + 0.5*log(r) + 0.5*c(Lambda)^2*(1/r-1)/(sigma2*psi)
+    } else {
+      log.odds <- log((omega/(1-omega))) + 0.5*log(r) + 0.5*Lambda[2:(k+1)]^2*(1/r-1)/(sigma2*psi)
+    }
     odds <- exp(log.odds)
     odds <- ifelse(odds > 1000, 1000, odds)
     prob = odds / (1 + odds)
@@ -184,15 +243,29 @@ continuous_ss_sdf <- function(f, R, sim_length, psi0 = 1, r = 0.001, aw = 1, bw 
 
     ## Step II.4. Draw sigma-squared: equation (31)
     if (type=='OLS') {
-      sigma2 <- rinvgamma(1,shape=(N+k+1)/2,
-                          scale=(t(a-beta%*%Lambda)%*%(a-beta%*%Lambda)+t(Lambda)%*%D%*%Lambda)/2)
+      if (intercept == FALSE) {
+        sigma2 <- rinvgamma(1,shape=(N+k)/2,
+                            scale=(t(a-beta%*%Lambda)%*%(a-beta%*%Lambda)+t(Lambda)%*%D%*%Lambda)/2)
+      } else {
+        sigma2 <- rinvgamma(1,shape=(N+k+1)/2,
+                            scale=(t(a-beta%*%Lambda)%*%(a-beta%*%Lambda)+t(Lambda)%*%D%*%Lambda)/2)
+      }
     }
     if (type=='GLS') {
-    sigma2 <- rinvgamma(1,shape=(N+k+1)/2,
-                        scale=(t(a-beta%*%Lambda)%*%solve(corrR)%*%(a-beta%*%Lambda)+t(Lambda)%*%D%*%Lambda)/2)
+      if (intercept == FALSE) {
+        sigma2 <- rinvgamma(1,shape=(N+k)/2,
+                            scale=(t(a-beta%*%Lambda)%*%solve(corrR)%*%(a-beta%*%Lambda)+t(Lambda)%*%D%*%Lambda)/2)
+      } else {
+        sigma2 <- rinvgamma(1,shape=(N+k+1)/2,
+                            scale=(t(a-beta%*%Lambda)%*%solve(corrR)%*%(a-beta%*%Lambda)+t(Lambda)%*%D%*%Lambda)/2)
+      }
     }
     lambda_path[i, ] <- as.vector(Lambda)
-    Lambda_f <- Lambda[2:length(Lambda)]/colSds(f)
+    if (intercept == FALSE) {
+      Lambda_f <- Lambda/colSds(f)
+    } else {
+      Lambda_f <- Lambda[2:length(Lambda)]/colSds(f)
+    }
     sdf_path[i,] <- as.vector(1 - f %*% Lambda_f)
     sdf_path[i,] <- 1 + sdf_path[i,] - mean(sdf_path[i,])   # normalize the SDF st it has a mean of one
   }

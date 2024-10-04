@@ -1,7 +1,7 @@
 Package: BayesianFactorZoo
 Title: Bayesian Solutions for the Factor Zoo: We Just Ran Two
         Quadrillion Models
-Version: 0.0.0.2
+Version: 0.0.0.3
 Authors@R: c(person("Svetlana", "Bryzgalova", role = c("aut")),
              person("Jiantao", "Huang", role = "cre", email = "huangjt@hku.hk"), 
              person("Christian", "Julliard", role = "aut"))
@@ -10,15 +10,15 @@ Imports: MCMCpack, reshape2, MASS, timeSeries, coda, mvtnorm,
         matrixcalc, ggplot2, nse, Rdpack, stats, utils, Matrix
 RdMacros: Rdpack
 Encoding: UTF-8
-RoxygenNote: 7.2.3
+RoxygenNote: 7.3.1
 License: GPL-3
 LazyData: true
 NeedsCompilation: no
-Packaged: 2023-11-13 13:54:59 UTC; jiantaohuang
+Packaged: 2024-10-04 08:54:47 UTC; jiantaohuang
 Author: Svetlana Bryzgalova [aut],
   Jiantao Huang [cre],
   Christian Julliard [aut]
 Maintainer: Jiantao Huang <huangjt@hku.hk>
 Depends: R (>= 3.5.0)
 Repository: CRAN
-Date/Publication: 2023-11-14 12:43:44 UTC
+Date/Publication: 2024-10-04 09:30:08 UTC

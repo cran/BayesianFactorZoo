@@ -13,7 +13,8 @@ continuous_ss_sdf_v2(
   r = 0.001,
   aw = 1,
   bw = 1,
-  type = "OLS"
+  type = "OLS",
+  intercept = TRUE
 )
 }
 \arguments{
@@ -37,14 +38,18 @@ and \eqn{N} is the number of test assets (\bold{\code{R} should NOT contain trad
 \item{bw}{The hyper-parameter related to the prior of \eqn{\gamma} (see \bold{Details});}
 
 \item{type}{If \code{type = 'OLS'} (\code{type = 'GLS'}), the function returns Bayesian OLS (GLS) estimates of risk prices. The default is 'OLS'.}
+
+\item{intercept}{If \code{intercept = TRUE} (\code{intercept = FALSE}), we include (exclude) the common intercept in the cross-sectional regression. The default is \code{intercept = TRUE}.}
 }
 \value{
 The return of \code{continuous_ss_sdf_v2} is a list of the following elements:
 \itemize{
 \item \code{gamma_path}: A \code{sim_length}\eqn{\times k} matrix of the posterior draws of \eqn{\gamma} (\eqn{k = k_1 + k_2}). Each row represents
 a draw. If \eqn{\gamma_j = 1} in one draw, factor \eqn{j} is included in the model in this draw and vice verse.
-\item \code{lambda_path}: A \code{sim_length}\eqn{\times (k+1)} matrix of the risk prices \eqn{\lambda}. Each row represents
-a draw. Note that the first column is \eqn{\lambda_c} corresponding to the constant term. The next \eqn{k} columns (i.e., the 2-th -- \eqn{(k+1)}-th columns) are the risk prices of the \eqn{k} factors.
+\item \code{lambda_path}: A \code{sim_length}\eqn{\times (k+1)} matrix of the risk prices \eqn{\lambda} if \code{intercept = TRUE}. Each row represents
+a draw. Note that the first column is \eqn{\lambda_c} corresponding to the constant term. The next \eqn{k} columns (i.e., the 2-th -- \eqn{(k+1)}-th columns)
+are the risk prices of the \eqn{k} factors. If \code{intercept = FALSE}, \code{lambda_path} is a \code{sim_length}\eqn{\times k} matrix of the risk prices,
+without the estimates of \eqn{\lambda_c}.
 \item \code{sdf_path}: A \code{sim_length}\eqn{\times t} matrix of posterior draws of SDFs. Each row represents a draw.
 \item \code{bma_sdf}: BMA-SDF.
 }
